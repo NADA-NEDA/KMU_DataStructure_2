@@ -1,132 +1,114 @@
-/*
- * °úÁ¦: ±×·¡ÇÁ Ç¥Çö ¹æ½Ä(ÀÎÁ¢ Çà·Ä vs ÀÎÁ¢ ¸®½ºÆ®) ¼º´É ºñ±³
- *
- * ¿ä±¸»çÇ×:
- * 1. Á¤Á¡(V) 100°³
- * 2. Èñ¼Ò ±×·¡ÇÁ (°£¼± E=100), ¹ĞÁı ±×·¡ÇÁ (°£¼± E=4000)
- * 3. 4°¡Áö ÄÉÀÌ½º Å×½ºÆ®:
- * - Èñ¼Ò + ÀÎÁ¢ Çà·Ä
- * - Èñ¼Ò + ÀÎÁ¢ ¸®½ºÆ®
- * - ¹ĞÁı + ÀÎÁ¢ Çà·Ä
- * - ¹ĞÁı + ÀÎÁ¢ ¸®½ºÆ®
- * 4. ÃøÁ¤ Ç×¸ñ:
- * - ¸Ş¸ğ¸® »ç¿ë·®
- * - °£¼± »ğÀÔ/»èÁ¦ ½Ã ºñ±³ È½¼ö
- * - µÎ Á¤Á¡ ¿¬°á È®ÀÎ ½Ã ºñ±³ È½¼ö
- * - ÇÑ ³ëµåÀÇ ÀÎÁ¢ ³ëµå Ãâ·Â ½Ã ºñ±³ È½¼ö
- */
+#include <stdio.h>  
+#include <stdlib.h>  
+#include <time.h>  
 
-#include <stdio.h>   // Ç¥ÁØ ÀÔÃâ·Â (printf µî)
-#include <stdlib.h>  // µ¿Àû ¸Ş¸ğ¸® ÇÒ´ç (malloc, free, calloc)
-#include <time.h>    // ·£´ı ½Ãµå »ı¼ºÀ» À§ÇÑ time()
+ // --- ìƒìˆ˜ ì •ì˜ ---
+ // ì½”ë“œì˜ ê°€ë…ì„± ë° ìœ ì§€ë³´ìˆ˜ë¥¼ ìœ„í•´ ìƒìˆ˜ë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
+#define VERTICES 100      // ì •ì ì˜ ê°œìˆ˜ (V)
+#define E_SPARSE 100      // í¬ì†Œ ê·¸ë˜í”„ì˜ ê°„ì„  ê°œìˆ˜
+#define E_DENSE 4000      // ë°€ì§‘ ê·¸ë˜í”„ì˜ ê°„ì„  ê°œìˆ˜
+#define SUPPRESS_PRINT 1  // 1ë¡œ ì„¤ì • ì‹œ, ì¸ì ‘ ë…¸ë“œ ì¶œë ¥ í…ŒìŠ¤íŠ¸ì—ì„œ ì‹¤ì œ ì¶œë ¥ì„ ì–µì œ
+                          // (ì„±ëŠ¥ ì¸¡ì •ì— ì§‘ì¤‘í•˜ê¸° ìœ„í•¨)
 
- // --- »ó¼ö Á¤ÀÇ ---
- // ÄÚµåÀÇ °¡µ¶¼º ¹× À¯Áöº¸¼ö¸¦ À§ÇØ »ó¼ö¸¦ Á¤ÀÇÇÕ´Ï´Ù.
-#define VERTICES 100      // Á¤Á¡ÀÇ °³¼ö (V)
-#define E_SPARSE 100      // Èñ¼Ò ±×·¡ÇÁÀÇ °£¼± °³¼ö
-#define E_DENSE 4000      // ¹ĞÁı ±×·¡ÇÁÀÇ °£¼± °³¼ö
-#define SUPPRESS_PRINT 1  // 1·Î ¼³Á¤ ½Ã, ÀÎÁ¢ ³ëµå Ãâ·Â Å×½ºÆ®¿¡¼­ ½ÇÁ¦ Ãâ·ÂÀ» ¾ïÁ¦
-                          // (¼º´É ÃøÁ¤¿¡ ÁıÁßÇÏ±â À§ÇÔ)
-
-// --- ¼º´É ÃøÁ¤¿ë ±¸Á¶Ã¼ ---
-// °¢ Å×½ºÆ® ÄÉÀÌ½º¿¡¼­ ¹ß»ıÇÏ´Â ºñ±³ È½¼ö¸¦ ÀúÀåÇÏ±â À§ÇÑ ±¸Á¶Ã¼ÀÔ´Ï´Ù.
+// --- ì„±ëŠ¥ ì¸¡ì •ìš© êµ¬ì¡°ì²´ ---
+// ê° í…ŒìŠ¤íŠ¸ ì¼€ì´ìŠ¤ì—ì„œ ë°œìƒí•˜ëŠ” ë¹„êµ íšŸìˆ˜ë¥¼ ì €ì¥í•˜ê¸° ìœ„í•œ êµ¬ì¡°ì²´ì…ë‹ˆë‹¤.
 typedef struct Metrics {
-    long long insert_delete_comps;  // °£¼± »ğÀÔ/»èÁ¦ ½Ã ´©Àû ºñ±³ È½¼ö
-    long long check_edge_comps;     // µÎ Á¤Á¡ ¿¬°á È®ÀÎ ½Ã ´©Àû ºñ±³ È½¼ö
-    long long print_neighbors_comps; // ÀÎÁ¢ ³ëµå Ãâ·Â ½Ã ´©Àû ºñ±³ È½¼ö
+    long long insert_delete_comps;  // ê°„ì„  ì‚½ì…/ì‚­ì œ ì‹œ ëˆ„ì  ë¹„êµ íšŸìˆ˜
+    long long check_edge_comps;     // ë‘ ì •ì  ì—°ê²° í™•ì¸ ì‹œ ëˆ„ì  ë¹„êµ íšŸìˆ˜
+    long long print_neighbors_comps; // ì¸ì ‘ ë…¸ë“œ ì¶œë ¥ ì‹œ ëˆ„ì  ë¹„êµ íšŸìˆ˜
 } Metrics;
 
 
 /*
  * ===================================================================
- * ¼½¼Ç 1: ÀÎÁ¢ ¸®½ºÆ® (Adjacency List) ±¸Çö
+ * ì„¹ì…˜ 1: ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ (Adjacency List) êµ¬í˜„
  * ===================================================================
- * - O(V+E)ÀÇ °ø°£ º¹Àâµµ.
- * - Èñ¼Ò ±×·¡ÇÁ¿¡ À¯¸®ÇÕ´Ï´Ù.
- * - °£¼± Å½»ö(È®ÀÎ, »èÁ¦) ¹× ÀÎÁ¢ ³ëµå Ãâ·ÂÀº ÇØ´ç Á¤Á¡ÀÇ Â÷¼ö(degree)¿¡ ºñ·ÊÇÕ´Ï´Ù.
+ * - O(V+E)ì˜ ê³µê°„ ë³µì¡ë„.
+ * - í¬ì†Œ ê·¸ë˜í”„ì— ìœ ë¦¬í•©ë‹ˆë‹¤.
+ * - ê°„ì„  íƒìƒ‰(í™•ì¸, ì‚­ì œ) ë° ì¸ì ‘ ë…¸ë“œ ì¶œë ¥ì€ í•´ë‹¹ ì •ì ì˜ ì°¨ìˆ˜(degree)ì— ë¹„ë¡€í•©ë‹ˆë‹¤.
  */
 
- // ÀÎÁ¢ ¸®½ºÆ®ÀÇ ³ëµå ±¸Á¶Ã¼ (ÇÏ³ªÀÇ '°£¼±'À» ³ªÅ¸³¿)
+ // ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ì˜ ë…¸ë“œ êµ¬ì¡°ì²´ (í•˜ë‚˜ì˜ 'ê°„ì„ 'ì„ ë‚˜íƒ€ëƒ„)
 typedef struct AdjListNode {
-    int dest;                    // ¸ñÀûÁö Á¤Á¡ (destination)
-    struct AdjListNode* next;    // ´ÙÀ½ ÀÎÁ¢ ³ëµå¸¦ °¡¸®Å°´Â Æ÷ÀÎÅÍ
+    int dest;                    // ëª©ì ì§€ ì •ì  (destination)
+    struct AdjListNode* next;    // ë‹¤ìŒ ì¸ì ‘ ë…¸ë“œë¥¼ ê°€ë¦¬í‚¤ëŠ” í¬ì¸í„°
 } AdjListNode;
 
-// ÀÎÁ¢ ¸®½ºÆ® (Æ¯Á¤ Á¤Á¡¿¡ ¿¬°áµÈ ÀÌ¿ôµéÀÇ ¸®½ºÆ®)
+// ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ (íŠ¹ì • ì •ì ì— ì—°ê²°ëœ ì´ì›ƒë“¤ì˜ ë¦¬ìŠ¤íŠ¸)
 typedef struct AdjList {
-    AdjListNode* head;           // ¸®½ºÆ®ÀÇ ½ÃÀÛ(Çìµå) Æ÷ÀÎÅÍ
+    AdjListNode* head;           // ë¦¬ìŠ¤íŠ¸ì˜ ì‹œì‘(í—¤ë“œ) í¬ì¸í„°
 } AdjList;
 
-// ÀÎÁ¢ ¸®½ºÆ® ±×·¡ÇÁ ÀüÃ¼¸¦ ³ªÅ¸³»´Â ±¸Á¶Ã¼
+// ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ ê·¸ë˜í”„ ì „ì²´ë¥¼ ë‚˜íƒ€ë‚´ëŠ” êµ¬ì¡°ì²´
 typedef struct GraphAdjList {
-    int V;                       // ±×·¡ÇÁÀÇ ÃÑ Á¤Á¡ °³¼ö
-    AdjList* array;              // °¢ Á¤Á¡ÀÇ ÀÎÁ¢ ¸®½ºÆ®(Çìµå Æ÷ÀÎÅÍ)¸¦ ´ã´Â ¹è¿­
-    long long memory_usage;      // ±×·¡ÇÁ »ı¼º ¹× °£¼± Ãß°¡ ½Ã »ç¿ëµÈ ÃÑ ¸Ş¸ğ¸®
+    int V;                       // ê·¸ë˜í”„ì˜ ì´ ì •ì  ê°œìˆ˜
+    AdjList* array;              // ê° ì •ì ì˜ ì¸ì ‘ ë¦¬ìŠ¤íŠ¸(í—¤ë“œ í¬ì¸í„°)ë¥¼ ë‹´ëŠ” ë°°ì—´
+    long long memory_usage;      // ê·¸ë˜í”„ ìƒì„± ë° ê°„ì„  ì¶”ê°€ ì‹œ ì‚¬ìš©ëœ ì´ ë©”ëª¨ë¦¬
 } GraphAdjList;
 
-// »õ ÀÎÁ¢ ¸®½ºÆ® ³ëµå(°£¼±)¸¦ »ı¼ºÇÏ´Â ÇïÆÛ ÇÔ¼ö
+// ìƒˆ ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ ë…¸ë“œ(ê°„ì„ )ë¥¼ ìƒì„±í•˜ëŠ” í—¬í¼ í•¨ìˆ˜
 AdjListNode* newAdjListNode(int dest) {
-    // ³ëµå Å©±â¸¸Å­ µ¿Àû ¸Ş¸ğ¸® ÇÒ´ç
+    // ë…¸ë“œ í¬ê¸°ë§Œí¼ ë™ì  ë©”ëª¨ë¦¬ í• ë‹¹
     AdjListNode* newNode = (AdjListNode*)malloc(sizeof(AdjListNode));
     newNode->dest = dest;
-    newNode->next = NULL; // ´ÙÀ½ ³ëµå´Â ¾ÆÁ÷ ¾øÀ½
+    newNode->next = NULL; // ë‹¤ìŒ ë…¸ë“œëŠ” ì•„ì§ ì—†ìŒ
     return newNode;
 }
 
-// ÀÎÁ¢ ¸®½ºÆ® ¹æ½ÄÀÇ ±×·¡ÇÁ¸¦ »ı¼ºÇÏ´Â ÇÔ¼ö
+// ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ ë°©ì‹ì˜ ê·¸ë˜í”„ë¥¼ ìƒì„±í•˜ëŠ” í•¨ìˆ˜
 GraphAdjList* createGraph_AdjList(int V) {
-    // 1. ±×·¡ÇÁ ±¸Á¶Ã¼ ÀÚÃ¼ÀÇ ¸Ş¸ğ¸® ÇÒ´ç
+    // 1. ê·¸ë˜í”„ êµ¬ì¡°ì²´ ìì²´ì˜ ë©”ëª¨ë¦¬ í• ë‹¹
     GraphAdjList* graph = (GraphAdjList*)malloc(sizeof(GraphAdjList));
     graph->V = V;
 
-    // 2. V°³ÀÇ Á¤Á¡¸¸Å­ 'ÀÎÁ¢ ¸®½ºÆ® Çìµå' ¹è¿­ ÇÒ´ç
+    // 2. Vê°œì˜ ì •ì ë§Œí¼ 'ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ í—¤ë“œ' ë°°ì—´ í• ë‹¹
     graph->array = (AdjList*)malloc(V * sizeof(AdjList));
 
-    // 3. ±âº» ¸Ş¸ğ¸® »ç¿ë·® °è»ê
-    // (±×·¡ÇÁ ±¸Á¶Ã¼ Å©±â + V°³ÀÇ ¸®½ºÆ® Çìµå ¹è¿­ Å©±â)
+    // 3. ê¸°ë³¸ ë©”ëª¨ë¦¬ ì‚¬ìš©ëŸ‰ ê³„ì‚°
+    // (ê·¸ë˜í”„ êµ¬ì¡°ì²´ í¬ê¸° + Vê°œì˜ ë¦¬ìŠ¤íŠ¸ í—¤ë“œ ë°°ì—´ í¬ê¸°)
     graph->memory_usage = sizeof(GraphAdjList) + (V * sizeof(AdjList));
 
-    // 4. ¸ğµç Á¤Á¡ÀÇ ¸®½ºÆ® Çìµå¸¦ NULL·Î ÃÊ±âÈ­ (¾ÆÁ÷ °£¼± ¾øÀ½)
+    // 4. ëª¨ë“  ì •ì ì˜ ë¦¬ìŠ¤íŠ¸ í—¤ë“œë¥¼ NULLë¡œ ì´ˆê¸°í™” (ì•„ì§ ê°„ì„  ì—†ìŒ)
     for (int i = 0; i < V; ++i) {
         graph->array[i].head = NULL;
     }
     return graph;
 }
 
-// (ÀÎÁ¢ ¸®½ºÆ®) °£¼± »ğÀÔ ÇÔ¼ö (ºñ±³ È½¼ö Ä«¿îÆ®)
-// m: ¼º´É ÃøÁ¤À» À§ÇÑ Metrics ±¸Á¶Ã¼ Æ÷ÀÎÅÍ
+// (ì¸ì ‘ ë¦¬ìŠ¤íŠ¸) ê°„ì„  ì‚½ì… í•¨ìˆ˜ (ë¹„êµ íšŸìˆ˜ ì¹´ìš´íŠ¸)
+// m: ì„±ëŠ¥ ì¸¡ì •ì„ ìœ„í•œ Metrics êµ¬ì¡°ì²´ í¬ì¸í„°
 void insertEdge_AdjList(GraphAdjList* graph, int src, int dest, Metrics* m) {
 
-    // --- 1. (src -> dest) °£¼± Ãß°¡ ---
-    // Áßº¹ È®ÀÎ: »ğÀÔ Àü, ÀÌ¹Ì °£¼±ÀÌ Á¸ÀçÇÏ´ÂÁö È®ÀÎÇÕ´Ï´Ù.
+    // --- 1. (src -> dest) ê°„ì„  ì¶”ê°€ ---
+    // ì¤‘ë³µ í™•ì¸: ì‚½ì… ì „, ì´ë¯¸ ê°„ì„ ì´ ì¡´ì¬í•˜ëŠ”ì§€ í™•ì¸í•©ë‹ˆë‹¤.
     AdjListNode* checker = graph->array[src].head;
     while (checker) {
-        if (m) m->insert_delete_comps++; // [ºñ±³ 1È¸] ¸®½ºÆ® ³ëµå¿Í dest ºñ±³
-        if (checker->dest == dest) return; // ÀÌ¹Ì Á¸ÀçÇÏ¹Ç·Î ÇÔ¼ö Á¾·á
+        if (m) m->insert_delete_comps++; // [ë¹„êµ 1íšŒ] ë¦¬ìŠ¤íŠ¸ ë…¸ë“œì™€ dest ë¹„êµ
+        if (checker->dest == dest) return; // ì´ë¯¸ ì¡´ì¬í•˜ë¯€ë¡œ í•¨ìˆ˜ ì¢…ë£Œ
         checker = checker->next;
     }
-    // (mÀÌ NULLÀÌ ¾Æ´Ï¶ó¸é) ¸¶Áö¸· NULL Ã¼Å©µµ ºñ±³ È½¼ö¿¡ Æ÷ÇÔ
-    if (m) m->insert_delete_comps++; // [ºñ±³ 1È¸] while¹® Á¾·á (NULL)
+    // (mì´ NULLì´ ì•„ë‹ˆë¼ë©´) ë§ˆì§€ë§‰ NULL ì²´í¬ë„ ë¹„êµ íšŸìˆ˜ì— í¬í•¨
+    if (m) m->insert_delete_comps++; // [ë¹„êµ 1íšŒ] whileë¬¸ ì¢…ë£Œ (NULL)
 
-    // »õ ³ëµå »ı¼º ¹× ¸®½ºÆ®ÀÇ ¸Ç ¾Õ¿¡ »ğÀÔ (O(1))
+    // ìƒˆ ë…¸ë“œ ìƒì„± ë° ë¦¬ìŠ¤íŠ¸ì˜ ë§¨ ì•ì— ì‚½ì… (O(1))
     AdjListNode* newNode = newAdjListNode(dest);
     newNode->next = graph->array[src].head;
     graph->array[src].head = newNode;
 
-    // ³ëµå°¡ Ãß°¡µÇ¾úÀ¸¹Ç·Î ¸Ş¸ğ¸® »ç¿ë·® °»½Å
-    if (m != NULL) { // (·£´ı »ı¼º ½Ã¿¡´Â m=NULLÀÌ¹Ç·Î °»½Å ¾È ÇÔ)
+    // ë…¸ë“œê°€ ì¶”ê°€ë˜ì—ˆìœ¼ë¯€ë¡œ ë©”ëª¨ë¦¬ ì‚¬ìš©ëŸ‰ ê°±ì‹ 
+    if (m != NULL) { // (ëœë¤ ìƒì„± ì‹œì—ëŠ” m=NULLì´ë¯€ë¡œ ê°±ì‹  ì•ˆ í•¨)
         graph->memory_usage += sizeof(AdjListNode);
     }
 
-    // --- 2. (dest -> src) °£¼± Ãß°¡ (¹«¹æÇâ ±×·¡ÇÁÀÌ¹Ç·Î) ---
-    // À§¿Í µ¿ÀÏÇÑ ·ÎÁ÷À» dest -> src ¿¡µµ Àû¿ë
+    // --- 2. (dest -> src) ê°„ì„  ì¶”ê°€ (ë¬´ë°©í–¥ ê·¸ë˜í”„ì´ë¯€ë¡œ) ---
+    // ìœ„ì™€ ë™ì¼í•œ ë¡œì§ì„ dest -> src ì—ë„ ì ìš©
     checker = graph->array[dest].head;
     while (checker) {
-        if (m) m->insert_delete_comps++; // [ºñ±³ 1È¸]
-        if (checker->dest == src) return; // (ÀÌ¹Ì À§¿¡¼­ src->dest¸¦ ³Ö¾úÀ¸¸é ¿©±â °É¸®¸é ¾ÈµÊ)
+        if (m) m->insert_delete_comps++; // [ë¹„êµ 1íšŒ]
+        if (checker->dest == src) return; // (ì´ë¯¸ ìœ„ì—ì„œ src->destë¥¼ ë„£ì—ˆìœ¼ë©´ ì—¬ê¸° ê±¸ë¦¬ë©´ ì•ˆë¨)
         checker = checker->next;
     }
-    if (m) m->insert_delete_comps++; // [ºñ±³ 1È¸]
+    if (m) m->insert_delete_comps++; // [ë¹„êµ 1íšŒ]
 
     newNode = newAdjListNode(src);
     newNode->next = graph->array[dest].head;
@@ -136,44 +118,44 @@ void insertEdge_AdjList(GraphAdjList* graph, int src, int dest, Metrics* m) {
     }
 }
 
-// (ÀÎÁ¢ ¸®½ºÆ®) °£¼± »èÁ¦ ÇÔ¼ö (ºñ±³ È½¼ö Ä«¿îÆ®)
+// (ì¸ì ‘ ë¦¬ìŠ¤íŠ¸) ê°„ì„  ì‚­ì œ í•¨ìˆ˜ (ë¹„êµ íšŸìˆ˜ ì¹´ìš´íŠ¸)
 void deleteEdge_AdjList(GraphAdjList* graph, int src, int dest, Metrics* m) {
 
-    // --- 1. (src -> dest) °£¼± »èÁ¦ ---
+    // --- 1. (src -> dest) ê°„ì„  ì‚­ì œ ---
     AdjListNode* curr = graph->array[src].head;
-    AdjListNode* prev = NULL; // »èÁ¦ÇÒ ³ëµåÀÇ ÀÌÀü ³ëµå¸¦ ÃßÀû
+    AdjListNode* prev = NULL; // ì‚­ì œí•  ë…¸ë“œì˜ ì´ì „ ë…¸ë“œë¥¼ ì¶”ì 
 
-    // »èÁ¦ÇÒ ³ëµå(dest) Å½»ö
+    // ì‚­ì œí•  ë…¸ë“œ(dest) íƒìƒ‰
     while (curr) {
-        m->insert_delete_comps++; // [ºñ±³ 1È¸] dest¿Í ÀÏÄ¡ÇÏ´ÂÁö ºñ±³
-        if (curr->dest == dest) break; // Ã£¾ÒÀ½
+        m->insert_delete_comps++; // [ë¹„êµ 1íšŒ] destì™€ ì¼ì¹˜í•˜ëŠ”ì§€ ë¹„êµ
+        if (curr->dest == dest) break; // ì°¾ì•˜ìŒ
         prev = curr;
         curr = curr->next;
     }
-    if (m && curr == NULL) m->insert_delete_comps++; // [ºñ±³ 1È¸] (¸ø Ã£°í NULL Á¾·á)
+    if (m && curr == NULL) m->insert_delete_comps++; // [ë¹„êµ 1íšŒ] (ëª» ì°¾ê³  NULL ì¢…ë£Œ)
 
-    if (curr) { // ³ëµå¸¦ Ã£¾Ò´Ù¸é
-        if (prev == NULL) { // »èÁ¦ÇÒ ³ëµå°¡ Çìµå ³ëµåÀÎ °æ¿ì
+    if (curr) { // ë…¸ë“œë¥¼ ì°¾ì•˜ë‹¤ë©´
+        if (prev == NULL) { // ì‚­ì œí•  ë…¸ë“œê°€ í—¤ë“œ ë…¸ë“œì¸ ê²½ìš°
             graph->array[src].head = curr->next;
         }
-        else { // »èÁ¦ÇÒ ³ëµå°¡ Áß°£ ³ëµåÀÎ °æ¿ì
+        else { // ì‚­ì œí•  ë…¸ë“œê°€ ì¤‘ê°„ ë…¸ë“œì¸ ê²½ìš°
             prev->next = curr->next;
         }
-        free(curr); // ³ëµå ¸Ş¸ğ¸® ÇØÁ¦
-        graph->memory_usage -= sizeof(AdjListNode); // ¸Ş¸ğ¸® »ç¿ë·® °»½Å
+        free(curr); // ë…¸ë“œ ë©”ëª¨ë¦¬ í•´ì œ
+        graph->memory_usage -= sizeof(AdjListNode); // ë©”ëª¨ë¦¬ ì‚¬ìš©ëŸ‰ ê°±ì‹ 
     }
 
-    // --- 2. (dest -> src) °£¼± »èÁ¦ (¹«¹æÇâ ±×·¡ÇÁÀÌ¹Ç·Î) ---
-    // À§¿Í µ¿ÀÏÇÑ ·ÎÁ÷ Àû¿ë
+    // --- 2. (dest -> src) ê°„ì„  ì‚­ì œ (ë¬´ë°©í–¥ ê·¸ë˜í”„ì´ë¯€ë¡œ) ---
+    // ìœ„ì™€ ë™ì¼í•œ ë¡œì§ ì ìš©
     curr = graph->array[dest].head;
     prev = NULL;
     while (curr) {
-        m->insert_delete_comps++; // [ºñ±³ 1È¸]
+        m->insert_delete_comps++; // [ë¹„êµ 1íšŒ]
         if (curr->dest == src) break;
         prev = curr;
         curr = curr->next;
     }
-    if (m && curr == NULL) m->insert_delete_comps++; // [ºñ±³ 1È¸]
+    if (m && curr == NULL) m->insert_delete_comps++; // [ë¹„êµ 1íšŒ]
 
     if (curr) {
         if (prev == NULL) graph->array[dest].head = curr->next;
@@ -183,135 +165,135 @@ void deleteEdge_AdjList(GraphAdjList* graph, int src, int dest, Metrics* m) {
     }
 }
 
-// (ÀÎÁ¢ ¸®½ºÆ®) µÎ Á¤Á¡ ¿¬°á È®ÀÎ ÇÔ¼ö (ºñ±³ È½¼ö Ä«¿îÆ®)
+// (ì¸ì ‘ ë¦¬ìŠ¤íŠ¸) ë‘ ì •ì  ì—°ê²° í™•ì¸ í•¨ìˆ˜ (ë¹„êµ íšŸìˆ˜ ì¹´ìš´íŠ¸)
 int checkEdge_AdjList(GraphAdjList* graph, int src, int dest, Metrics* m) {
     AdjListNode* curr = graph->array[src].head;
 
-    // srcÀÇ ÀÎÁ¢ ¸®½ºÆ®¸¦ ¼øÈ¸ÇÏ¸ç dest°¡ ÀÖ´ÂÁö Å½»ö
+    // srcì˜ ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ë¥¼ ìˆœíšŒí•˜ë©° destê°€ ìˆëŠ”ì§€ íƒìƒ‰
     while (curr) {
-        m->check_edge_comps++; // [ºñ±³ 1È¸] ÇöÀç ³ëµå°¡ destÀÎÁö ºñ±³
-        if (curr->dest == dest) return 1; // Ã£¾ÒÀ½ (¿¬°áµÊ)
+        m->check_edge_comps++; // [ë¹„êµ 1íšŒ] í˜„ì¬ ë…¸ë“œê°€ destì¸ì§€ ë¹„êµ
+        if (curr->dest == dest) return 1; // ì°¾ì•˜ìŒ (ì—°ê²°ë¨)
         curr = curr->next;
     }
-    // ¸¶Áö¸· NULL Ã¼Å©
-    if (m) m->check_edge_comps++; // [ºñ±³ 1È¸] (¸ø Ã£°í NULL Á¾·á)
+    // ë§ˆì§€ë§‰ NULL ì²´í¬
+    if (m) m->check_edge_comps++; // [ë¹„êµ 1íšŒ] (ëª» ì°¾ê³  NULL ì¢…ë£Œ)
 
-    return 0; // ¸ø Ã£¾ÒÀ½ (¿¬°á ¾È µÊ)
+    return 0; // ëª» ì°¾ì•˜ìŒ (ì—°ê²° ì•ˆ ë¨)
 }
 
-// (ÀÎÁ¢ ¸®½ºÆ®) Æ¯Á¤ ³ëµåÀÇ ÀÎÁ¢ ³ëµå Ãâ·Â (ºñ±³ È½¼ö Ä«¿îÆ®)
+// (ì¸ì ‘ ë¦¬ìŠ¤íŠ¸) íŠ¹ì • ë…¸ë“œì˜ ì¸ì ‘ ë…¸ë“œ ì¶œë ¥ (ë¹„êµ íšŸìˆ˜ ì¹´ìš´íŠ¸)
 void printNeighbors_AdjList(GraphAdjList* graph, int v, Metrics* m) {
     AdjListNode* curr = graph->array[v].head;
 
-    // SUPPRESS_PRINT ÇÃ·¡±×°¡ 0ÀÏ ¶§¸¸ ½ÇÁ¦ Ãâ·Â
-    if (!SUPPRESS_PRINT) printf("Á¤Á¡ %dÀÇ ÀÎÁ¢ ³ëµå: ", v);
+    // SUPPRESS_PRINT í”Œë˜ê·¸ê°€ 0ì¼ ë•Œë§Œ ì‹¤ì œ ì¶œë ¥
+    if (!SUPPRESS_PRINT) printf("ì •ì  %dì˜ ì¸ì ‘ ë…¸ë“œ: ", v);
 
-    // ÇØ´ç Á¤Á¡ÀÇ ÀÎÁ¢ ¸®½ºÆ®¸¦ ³¡±îÁö ¼øÈ¸
+    // í•´ë‹¹ ì •ì ì˜ ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ë¥¼ ëê¹Œì§€ ìˆœíšŒ
     while (curr) {
-        m->print_neighbors_comps++; // [ºñ±³ 1È¸] ·çÇÁ Á¶°Ç(curr != NULL) È®ÀÎ
+        m->print_neighbors_comps++; // [ë¹„êµ 1íšŒ] ë£¨í”„ ì¡°ê±´(curr != NULL) í™•ì¸
 
         if (!SUPPRESS_PRINT) printf("%d ", curr->dest);
         curr = curr->next;
     }
 
-    // ¸¶Áö¸· NULL Ã¼Å©
-    if (m) m->print_neighbors_comps++; // [ºñ±³ 1È¸] (·çÇÁ Á¾·á)
+    // ë§ˆì§€ë§‰ NULL ì²´í¬
+    if (m) m->print_neighbors_comps++; // [ë¹„êµ 1íšŒ] (ë£¨í”„ ì¢…ë£Œ)
 
     if (!SUPPRESS_PRINT) printf("\n");
 }
 
-// (ÀÎÁ¢ ¸®½ºÆ®) ±×·¡ÇÁ ¸Ş¸ğ¸® ÇØÁ¦
+// (ì¸ì ‘ ë¦¬ìŠ¤íŠ¸) ê·¸ë˜í”„ ë©”ëª¨ë¦¬ í•´ì œ
 void freeGraph_AdjList(GraphAdjList* graph) {
-    // ¸ğµç Á¤Á¡À» ¼øÈ¸
+    // ëª¨ë“  ì •ì ì„ ìˆœíšŒ
     for (int v = 0; v < graph->V; ++v) {
         AdjListNode* curr = graph->array[v].head;
-        // °¢ Á¤Á¡ÀÇ ÀÎÁ¢ ¸®½ºÆ®¿¡ ÀÖ´Â ¸ğµç ³ëµå(°£¼±)µéÀ» ÇØÁ¦
+        // ê° ì •ì ì˜ ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ì— ìˆëŠ” ëª¨ë“  ë…¸ë“œ(ê°„ì„ )ë“¤ì„ í•´ì œ
         while (curr) {
             AdjListNode* temp = curr;
             curr = curr->next;
             free(temp);
         }
     }
-    // Á¤Á¡ Çìµå Æ÷ÀÎÅÍ ¹è¿­ ÇØÁ¦
+    // ì •ì  í—¤ë“œ í¬ì¸í„° ë°°ì—´ í•´ì œ
     free(graph->array);
-    // ±×·¡ÇÁ ±¸Á¶Ã¼ ÀÚÃ¼ ÇØÁ¦
+    // ê·¸ë˜í”„ êµ¬ì¡°ì²´ ìì²´ í•´ì œ
     free(graph);
 }
 
 
 /*
  * ===================================================================
- * ¼½¼Ç 2: ÀÎÁ¢ Çà·Ä (Adjacency Matrix) ±¸Çö
+ * ì„¹ì…˜ 2: ì¸ì ‘ í–‰ë ¬ (Adjacency Matrix) êµ¬í˜„
  * ===================================================================
- * - O(V^2)ÀÇ °ø°£ º¹Àâµµ.
- * - ¹ĞÁı ±×·¡ÇÁ¿¡ À¯¸®ÇÕ´Ï´Ù.
- * - °£¼± »ğÀÔ/»èÁ¦/È®ÀÎÀº O(1)·Î ¸Å¿ì ºü¸¨´Ï´Ù.
- * - ÀÎÁ¢ ³ëµå Ãâ·ÂÀº O(V)·Î, Ç×»ó ¸ğµç Á¤Á¡À» È®ÀÎÇØ¾ß ÇÕ´Ï´Ù.
+ * - O(V^2)ì˜ ê³µê°„ ë³µì¡ë„.
+ * - ë°€ì§‘ ê·¸ë˜í”„ì— ìœ ë¦¬í•©ë‹ˆë‹¤.
+ * - ê°„ì„  ì‚½ì…/ì‚­ì œ/í™•ì¸ì€ O(1)ë¡œ ë§¤ìš° ë¹ ë¦…ë‹ˆë‹¤.
+ * - ì¸ì ‘ ë…¸ë“œ ì¶œë ¥ì€ O(V)ë¡œ, í•­ìƒ ëª¨ë“  ì •ì ì„ í™•ì¸í•´ì•¼ í•©ë‹ˆë‹¤.
  */
 
- // ÀÎÁ¢ Çà·Ä ±×·¡ÇÁ ±¸Á¶Ã¼
+ // ì¸ì ‘ í–‰ë ¬ ê·¸ë˜í”„ êµ¬ì¡°ì²´
 typedef struct GraphAdjMatrix {
-    int V;        // ÃÑ Á¤Á¡ °³¼ö
-    int** matrix; // V x V Å©±âÀÇ 2Â÷¿ø ¹è¿­À» °¡¸®Å°´Â Æ÷ÀÎÅÍ
+    int V;        // ì´ ì •ì  ê°œìˆ˜
+    int** matrix; // V x V í¬ê¸°ì˜ 2ì°¨ì› ë°°ì—´ì„ ê°€ë¦¬í‚¤ëŠ” í¬ì¸í„°
 } GraphAdjMatrix;
 
-// ÀÎÁ¢ Çà·Ä ¹æ½ÄÀÇ ±×·¡ÇÁ¸¦ »ı¼ºÇÏ´Â ÇÔ¼ö
+// ì¸ì ‘ í–‰ë ¬ ë°©ì‹ì˜ ê·¸ë˜í”„ë¥¼ ìƒì„±í•˜ëŠ” í•¨ìˆ˜
 GraphAdjMatrix* createGraph_Matrix(int V) {
-    // 1. ±×·¡ÇÁ ±¸Á¶Ã¼ ÀÚÃ¼ ¸Ş¸ğ¸® ÇÒ´ç
+    // 1. ê·¸ë˜í”„ êµ¬ì¡°ì²´ ìì²´ ë©”ëª¨ë¦¬ í• ë‹¹
     GraphAdjMatrix* graph = (GraphAdjMatrix*)malloc(sizeof(GraphAdjMatrix));
     graph->V = V;
 
-    // 2. 2D ¹è¿­ ÇÒ´ç (1´Ü°è: Çà Æ÷ÀÎÅÍ ¹è¿­ ÇÒ´ç)
-    // int* (Æ÷ÀÎÅÍ) V°³¸¦ ÀúÀåÇÒ °ø°£ ÇÒ´ç
+    // 2. 2D ë°°ì—´ í• ë‹¹ (1ë‹¨ê³„: í–‰ í¬ì¸í„° ë°°ì—´ í• ë‹¹)
+    // int* (í¬ì¸í„°) Vê°œë¥¼ ì €ì¥í•  ê³µê°„ í• ë‹¹
     graph->matrix = (int**)malloc(V * sizeof(int*));
 
-    // 3. 2D ¹è¿­ ÇÒ´ç (2´Ü°è: °¢ ÇàÀÇ ½ÇÁ¦ µ¥ÀÌÅÍ °ø°£ ÇÒ´ç)
+    // 3. 2D ë°°ì—´ í• ë‹¹ (2ë‹¨ê³„: ê° í–‰ì˜ ì‹¤ì œ ë°ì´í„° ê³µê°„ í• ë‹¹)
     for (int i = 0; i < V; i++) {
-        // V°³ÀÇ int¸¦ ÀúÀåÇÒ °ø°£ ÇÒ´ç
-        // callocÀ» »ç¿ëÇÏ¿© ¸ğµç °ªÀ» 0 (°£¼± ¾øÀ½)À¸·Î ÀÚµ¿ ÃÊ±âÈ­
+        // Vê°œì˜ intë¥¼ ì €ì¥í•  ê³µê°„ í• ë‹¹
+        // callocì„ ì‚¬ìš©í•˜ì—¬ ëª¨ë“  ê°’ì„ 0 (ê°„ì„  ì—†ìŒ)ìœ¼ë¡œ ìë™ ì´ˆê¸°í™”
         graph->matrix[i] = (int*)calloc(V, sizeof(int));
     }
     return graph;
 }
 
-// (ÀÎÁ¢ Çà·Ä) °£¼± »ğÀÔ ÇÔ¼ö (ºñ±³ È½¼ö Ä«¿îÆ®)
+// (ì¸ì ‘ í–‰ë ¬) ê°„ì„  ì‚½ì… í•¨ìˆ˜ (ë¹„êµ íšŸìˆ˜ ì¹´ìš´íŠ¸)
 void insertEdge_Matrix(GraphAdjMatrix* graph, int src, int dest, Metrics* m) {
-    // O(1) Á¢±Ù
-    // »ğÀÔ Àü, 0ÀÎÁö È®ÀÎ (ÀÌ È®ÀÎ °úÁ¤À» 'ºñ±³'·Î °£ÁÖ)
-    m->insert_delete_comps++; // [ºñ±³ 1È¸]
+    // O(1) ì ‘ê·¼
+    // ì‚½ì… ì „, 0ì¸ì§€ í™•ì¸ (ì´ í™•ì¸ ê³¼ì •ì„ 'ë¹„êµ'ë¡œ ê°„ì£¼)
+    m->insert_delete_comps++; // [ë¹„êµ 1íšŒ]
     if (graph->matrix[src][dest] == 0) {
-        graph->matrix[src][dest] = 1; // (src -> dest) ¿¬°á
-        graph->matrix[dest][src] = 1; // (dest -> src) ¿¬°á (¹«¹æÇâ)
+        graph->matrix[src][dest] = 1; // (src -> dest) ì—°ê²°
+        graph->matrix[dest][src] = 1; // (dest -> src) ì—°ê²° (ë¬´ë°©í–¥)
     }
 }
 
-// (ÀÎÁ¢ Çà·Ä) °£¼± »èÁ¦ ÇÔ¼ö (ºñ±³ È½¼ö Ä«¿îÆ®)
+// (ì¸ì ‘ í–‰ë ¬) ê°„ì„  ì‚­ì œ í•¨ìˆ˜ (ë¹„êµ íšŸìˆ˜ ì¹´ìš´íŠ¸)
 void deleteEdge_Matrix(GraphAdjMatrix* graph, int src, int dest, Metrics* m) {
-    // O(1) Á¢±Ù
-    // »èÁ¦ Àü, 1ÀÎÁö È®ÀÎ (ÀÌ È®ÀÎ °úÁ¤À» 'ºñ±³'·Î °£ÁÖ)
-    m->insert_delete_comps++; // [ºñ±³ 1È¸]
+    // O(1) ì ‘ê·¼
+    // ì‚­ì œ ì „, 1ì¸ì§€ í™•ì¸ (ì´ í™•ì¸ ê³¼ì •ì„ 'ë¹„êµ'ë¡œ ê°„ì£¼)
+    m->insert_delete_comps++; // [ë¹„êµ 1íšŒ]
     if (graph->matrix[src][dest] == 1) {
-        graph->matrix[src][dest] = 0; // (src -> dest) ¿¬°á ÇØÁ¦
-        graph->matrix[dest][src] = 0; // (dest -> src) ¿¬°á ÇØÁ¦ (¹«¹æÇâ)
+        graph->matrix[src][dest] = 0; // (src -> dest) ì—°ê²° í•´ì œ
+        graph->matrix[dest][src] = 0; // (dest -> src) ì—°ê²° í•´ì œ (ë¬´ë°©í–¥)
     }
 }
 
-// (ÀÎÁ¢ Çà·Ä) µÎ Á¤Á¡ ¿¬°á È®ÀÎ ÇÔ¼ö (ºñ±³ È½¼ö Ä«¿îÆ®)
+// (ì¸ì ‘ í–‰ë ¬) ë‘ ì •ì  ì—°ê²° í™•ì¸ í•¨ìˆ˜ (ë¹„êµ íšŸìˆ˜ ì¹´ìš´íŠ¸)
 int checkEdge_Matrix(GraphAdjMatrix* graph, int src, int dest, Metrics* m) {
-    // O(1) Á¢±Ù
-    // matrix[src][dest] °ªÀÌ 1ÀÎÁö È®ÀÎÇÏ´Â °Í ÀÚÃ¼¸¦ 'ºñ±³'·Î °£ÁÖ
-    m->check_edge_comps++; // [ºñ±³ 1È¸]
+    // O(1) ì ‘ê·¼
+    // matrix[src][dest] ê°’ì´ 1ì¸ì§€ í™•ì¸í•˜ëŠ” ê²ƒ ìì²´ë¥¼ 'ë¹„êµ'ë¡œ ê°„ì£¼
+    m->check_edge_comps++; // [ë¹„êµ 1íšŒ]
     return graph->matrix[src][dest] == 1;
 }
 
-// (ÀÎÁ¢ Çà·Ä) Æ¯Á¤ ³ëµåÀÇ ÀÎÁ¢ ³ëµå Ãâ·Â (ºñ±³ È½¼ö Ä«¿îÆ®)
+// (ì¸ì ‘ í–‰ë ¬) íŠ¹ì • ë…¸ë“œì˜ ì¸ì ‘ ë…¸ë“œ ì¶œë ¥ (ë¹„êµ íšŸìˆ˜ ì¹´ìš´íŠ¸)
 void printNeighbors_Matrix(GraphAdjMatrix* graph, int v, Metrics* m) {
-    if (!SUPPRESS_PRINT) printf("Á¤Á¡ %dÀÇ ÀÎÁ¢ ³ëµå: ", v);
+    if (!SUPPRESS_PRINT) printf("ì •ì  %dì˜ ì¸ì ‘ ë…¸ë“œ: ", v);
 
-    // ÇØ´ç Á¤Á¡(v)ÀÇ 'Çà(row)'À» ¸ğµÎ ¼øÈ¸ÇØ¾ß ÇÔ (O(V))
+    // í•´ë‹¹ ì •ì (v)ì˜ 'í–‰(row)'ì„ ëª¨ë‘ ìˆœíšŒí•´ì•¼ í•¨ (O(V))
     for (int i = 0; i < graph->V; i++) {
-        // v¿Í i°¡ ¿¬°áµÇ¾î ÀÖ´ÂÁö (°ªÀÌ 1ÀÎÁö) È®ÀÎ
-        m->print_neighbors_comps++; // [ºñ±³ 1È¸] (¸Å ·çÇÁ¸¶´Ù 1ÀÎÁö È®ÀÎ)
+        // vì™€ iê°€ ì—°ê²°ë˜ì–´ ìˆëŠ”ì§€ (ê°’ì´ 1ì¸ì§€) í™•ì¸
+        m->print_neighbors_comps++; // [ë¹„êµ 1íšŒ] (ë§¤ ë£¨í”„ë§ˆë‹¤ 1ì¸ì§€ í™•ì¸)
         if (graph->matrix[v][i] == 1) {
             if (!SUPPRESS_PRINT) printf("%d ", i);
         }
@@ -319,37 +301,37 @@ void printNeighbors_Matrix(GraphAdjMatrix* graph, int v, Metrics* m) {
     if (!SUPPRESS_PRINT) printf("\n");
 }
 
-// (ÀÎÁ¢ Çà·Ä) ±×·¡ÇÁ ¸Ş¸ğ¸® »ç¿ë·® °è»ê
+// (ì¸ì ‘ í–‰ë ¬) ê·¸ë˜í”„ ë©”ëª¨ë¦¬ ì‚¬ìš©ëŸ‰ ê³„ì‚°
 long getMemory_Matrix(int V) {
     long mem = 0;
-    mem += sizeof(GraphAdjMatrix);      // 1. ±×·¡ÇÁ ±¸Á¶Ã¼ ÀÚÃ¼ Å©±â
-    mem += V * sizeof(int*);            // 2. Çà Æ÷ÀÎÅÍ ¹è¿­ Å©±â (V°³)
-    mem += (long)V * V * sizeof(int);   // 3. V*V °³ÀÇ ½ÇÁ¦ µ¥ÀÌÅÍ(int) Å©±â
+    mem += sizeof(GraphAdjMatrix);      // 1. ê·¸ë˜í”„ êµ¬ì¡°ì²´ ìì²´ í¬ê¸°
+    mem += V * sizeof(int*);            // 2. í–‰ í¬ì¸í„° ë°°ì—´ í¬ê¸° (Vê°œ)
+    mem += (long)V * V * sizeof(int);   // 3. V*V ê°œì˜ ì‹¤ì œ ë°ì´í„°(int) í¬ê¸°
     return mem;
 }
 
-// (ÀÎÁ¢ Çà·Ä) ±×·¡ÇÁ ¸Ş¸ğ¸® ÇØÁ¦
+// (ì¸ì ‘ í–‰ë ¬) ê·¸ë˜í”„ ë©”ëª¨ë¦¬ í•´ì œ
 void freeGraph_Matrix(GraphAdjMatrix* graph) {
-    // ÇÒ´çÀÇ ¿ª¼øÀ¸·Î ÇØÁ¦
-    // 1. °¢ ÇàÀÇ ½ÇÁ¦ µ¥ÀÌÅÍ °ø°£ ÇØÁ¦
+    // í• ë‹¹ì˜ ì—­ìˆœìœ¼ë¡œ í•´ì œ
+    // 1. ê° í–‰ì˜ ì‹¤ì œ ë°ì´í„° ê³µê°„ í•´ì œ
     for (int i = 0; i < graph->V; i++) {
         free(graph->matrix[i]);
     }
-    // 2. Çà Æ÷ÀÎÅÍ ¹è¿­ ÇØÁ¦
+    // 2. í–‰ í¬ì¸í„° ë°°ì—´ í•´ì œ
     free(graph->matrix);
-    // 3. ±×·¡ÇÁ ±¸Á¶Ã¼ ÀÚÃ¼ ÇØÁ¦
+    // 3. ê·¸ë˜í”„ êµ¬ì¡°ì²´ ìì²´ í•´ì œ
     free(graph);
 }
 
 
 /*
  * ===================================================================
- * ¼½¼Ç 3: ·£´ı ±×·¡ÇÁ »ı¼º ¹× Å×½ºÆ® ½ÇÇà
+ * ì„¹ì…˜ 3: ëœë¤ ê·¸ë˜í”„ ìƒì„± ë° í…ŒìŠ¤íŠ¸ ì‹¤í–‰
  * ===================================================================
  */
 
- // (¼º´É ÃøÁ¤ ¾øÀÌ) °£¼± Á¸Àç ¿©ºÎ È®ÀÎÇÏ´Â ÇïÆÛ ÇÔ¼ö
- // (·£´ı ±×·¡ÇÁ »ı¼º ½Ã Áßº¹ °£¼±À» ÇÇÇÏ±â À§ÇØ »ç¿ë)
+ // (ì„±ëŠ¥ ì¸¡ì • ì—†ì´) ê°„ì„  ì¡´ì¬ ì—¬ë¶€ í™•ì¸í•˜ëŠ” í—¬í¼ í•¨ìˆ˜
+ // (ëœë¤ ê·¸ë˜í”„ ìƒì„± ì‹œ ì¤‘ë³µ ê°„ì„ ì„ í”¼í•˜ê¸° ìœ„í•´ ì‚¬ìš©)
 int checkEdge_Matrix_no_metric(GraphAdjMatrix* graph, int src, int dest) {
     return graph->matrix[src][dest] == 1;
 }
@@ -362,88 +344,88 @@ int checkEdge_AdjList_no_metric(GraphAdjList* graph, int src, int dest) {
     return 0;
 }
 
-// E°³ÀÇ °£¼±À» °¡Áø ·£´ı ±×·¡ÇÁ »ı¼º
-// (void* graph: ÀÎÁ¢ Çà·Ä ¶Ç´Â ÀÎÁ¢ ¸®½ºÆ® ±×·¡ÇÁ Æ÷ÀÎÅÍ)
-// (isMatrix: 1ÀÌ¸é Çà·Ä, 0ÀÌ¸é ¸®½ºÆ®)
+// Eê°œì˜ ê°„ì„ ì„ ê°€ì§„ ëœë¤ ê·¸ë˜í”„ ìƒì„±
+// (void* graph: ì¸ì ‘ í–‰ë ¬ ë˜ëŠ” ì¸ì ‘ ë¦¬ìŠ¤íŠ¸ ê·¸ë˜í”„ í¬ì¸í„°)
+// (isMatrix: 1ì´ë©´ í–‰ë ¬, 0ì´ë©´ ë¦¬ìŠ¤íŠ¸)
 void generateRandomGraph(int V, int E, void* graph, int isMatrix) {
     int edges_added = 0;
 
-    // °£¼± Áßº¹ Ãß°¡¸¦ ¸·±â À§ÇÑ ÀÓ½Ã V x V ¹è¿­
-    // (¸Ş¸ğ¸®¸¦ ´õ ¾²Áö¸¸ Á¤È®È÷ E°³ÀÇ °£¼±À» »ı¼ºÇÏ±â À§ÇÔ)
+    // ê°„ì„  ì¤‘ë³µ ì¶”ê°€ë¥¼ ë§‰ê¸° ìœ„í•œ ì„ì‹œ V x V ë°°ì—´
+    // (ë©”ëª¨ë¦¬ë¥¼ ë” ì“°ì§€ë§Œ ì •í™•íˆ Eê°œì˜ ê°„ì„ ì„ ìƒì„±í•˜ê¸° ìœ„í•¨)
     int** added = (int**)malloc(V * sizeof(int*));
     for (int i = 0; i < V; i++) {
         added[i] = (int*)calloc(V, sizeof(int));
     }
 
-    // E°³ÀÇ °£¼±ÀÌ Ãß°¡µÉ ¶§±îÁö ¹İº¹
+    // Eê°œì˜ ê°„ì„ ì´ ì¶”ê°€ë  ë•Œê¹Œì§€ ë°˜ë³µ
     while (edges_added < E) {
-        int u = rand() % V; // ·£´ı Á¤Á¡ u
-        int v = rand() % V; // ·£´ı Á¤Á¡ v
+        int u = rand() % V; // ëœë¤ ì •ì  u
+        int v = rand() % V; // ëœë¤ ì •ì  v
 
-        // (u != v) : ÀÚ±â ÀÚ½ÅÀ» °¡¸®Å°´Â ·çÇÁ ¹æÁö
-        // (added[u][v] == 0) : ÀÌ¹Ì Ãß°¡µÈ °£¼±ÀÎÁö È®ÀÎ
+        // (u != v) : ìê¸° ìì‹ ì„ ê°€ë¦¬í‚¤ëŠ” ë£¨í”„ ë°©ì§€
+        // (added[u][v] == 0) : ì´ë¯¸ ì¶”ê°€ëœ ê°„ì„ ì¸ì§€ í™•ì¸
         if (u != v && added[u][v] == 0) {
 
-            // (isMatrix ¿©ºÎ¿¡ µû¶ó ±×·¡ÇÁ Å¸ÀÔ Ä³½ºÆÃ)
+            // (isMatrix ì—¬ë¶€ì— ë”°ë¼ ê·¸ë˜í”„ íƒ€ì… ìºìŠ¤íŒ…)
             if (isMatrix) {
-                // (¼º´É ÃøÁ¤ ¾ø´Â ´Ü¼ø »ğÀÔ)
+                // (ì„±ëŠ¥ ì¸¡ì • ì—†ëŠ” ë‹¨ìˆœ ì‚½ì…)
                 GraphAdjMatrix* g = (GraphAdjMatrix*)graph;
                 g->matrix[u][v] = 1;
                 g->matrix[v][u] = 1;
             }
             else {
-                // (¼º´É ÃøÁ¤À» À§ÇØ NULL Àü´Ş)
+                // (ì„±ëŠ¥ ì¸¡ì •ì„ ìœ„í•´ NULL ì „ë‹¬)
                 insertEdge_AdjList((GraphAdjList*)graph, u, v, NULL);
             }
 
-            // Áßº¹ ¹æÁö ¹è¿­¿¡ ±â·Ï
+            // ì¤‘ë³µ ë°©ì§€ ë°°ì—´ì— ê¸°ë¡
             added[u][v] = 1;
             added[v][u] = 1;
-            edges_added++; // Ãß°¡µÈ °£¼± ¼ö Áõ°¡
+            edges_added++; // ì¶”ê°€ëœ ê°„ì„  ìˆ˜ ì¦ê°€
         }
     }
 
-    // ÀÓ½Ã Áßº¹ ¹æÁö ¹è¿­ ÇØÁ¦
+    // ì„ì‹œ ì¤‘ë³µ ë°©ì§€ ë°°ì—´ í•´ì œ
     for (int i = 0; i < V; i++) {
         free(added[i]);
     }
     free(added);
 }
 
-// 4°¡Áö ÄÉÀÌ½º¸¦ ½ÇÇàÇÏ´Â ¸ŞÀÎ Å×½ºÆ® ÇÔ¼ö
+// 4ê°€ì§€ ì¼€ì´ìŠ¤ë¥¼ ì‹¤í–‰í•˜ëŠ” ë©”ì¸ í…ŒìŠ¤íŠ¸ í•¨ìˆ˜
 void runTestCase(int V, int E, int isMatrix) {
 
-    // 1. ¼º´É ÃøÁ¤À» À§ÇÑ Metrics º¯¼ö ÃÊ±âÈ­
-    Metrics metrics = { 0, 0, 0 }; // ¸ğµç Ä«¿îÅÍ¸¦ 0À¸·Î
-    void* graph;                 // ±×·¡ÇÁ Æ÷ÀÎÅÍ (¾î´À Å¸ÀÔÀÌµç °¡¸®Å³ ¼ö ÀÖ°Ô)
-    long memory = 0;             // ¸Ş¸ğ¸® »ç¿ë·®
+    // 1. ì„±ëŠ¥ ì¸¡ì •ì„ ìœ„í•œ Metrics ë³€ìˆ˜ ì´ˆê¸°í™”
+    Metrics metrics = { 0, 0, 0 }; // ëª¨ë“  ì¹´ìš´í„°ë¥¼ 0ìœ¼ë¡œ
+    void* graph;                 // ê·¸ë˜í”„ í¬ì¸í„° (ì–´ëŠ íƒ€ì…ì´ë“  ê°€ë¦¬í‚¬ ìˆ˜ ìˆê²Œ)
+    long memory = 0;             // ë©”ëª¨ë¦¬ ì‚¬ìš©ëŸ‰
 
-    // --- 1. ±×·¡ÇÁ »ı¼º ¹× ·£´ı °£¼± Ã¤¿ì±â ---
+    // --- 1. ê·¸ë˜í”„ ìƒì„± ë° ëœë¤ ê°„ì„  ì±„ìš°ê¸° ---
     if (isMatrix) {
         graph = createGraph_Matrix(V);
         generateRandomGraph(V, E, graph, 1);
-        // (ÃøÁ¤ Ç×¸ñ 1) ¸Ş¸ğ¸® »ç¿ë·® °è»ê
+        // (ì¸¡ì • í•­ëª© 1) ë©”ëª¨ë¦¬ ì‚¬ìš©ëŸ‰ ê³„ì‚°
         memory = getMemory_Matrix(V);
     }
     else {
         graph = createGraph_AdjList(V);
         generateRandomGraph(V, E, graph, 0);
-        // (ÃøÁ¤ Ç×¸ñ 1) ¸Ş¸ğ¸® »ç¿ë·® °è»ê (½ÇÁ¦ ÇÒ´çµÈ ³ëµå Æ÷ÇÔ)
-        // (Âü°í: ·£´ı »ı¼º ½Ã »ç¿ëµÈ insertEdge_AdjList(m=NULL)´Â ¸Ş¸ğ¸®¸¦ °è»êÇÏÁö ¾Ê¾ÒÀ¸¹Ç·Î,
-        //  Á¤È®ÇÑ °è»êÀ» À§ÇØ¼± generateRandomGraph¿¡¼­ memory_usage¸¦ °»½ÅÇØ¾ß ÇÔ.
-        //  (ÇöÀç ÄÚµå´Â °£¼± Ãß°¡/»èÁ¦ Å×½ºÆ® ½ÃÀÇ ¸Ş¸ğ¸®¸¸ °»½Å -> ÃÊ±â ¸Ş¸ğ¸®·Î ¼öÁ¤))
+        // (ì¸¡ì • í•­ëª© 1) ë©”ëª¨ë¦¬ ì‚¬ìš©ëŸ‰ ê³„ì‚° (ì‹¤ì œ í• ë‹¹ëœ ë…¸ë“œ í¬í•¨)
+        // (ì°¸ê³ : ëœë¤ ìƒì„± ì‹œ ì‚¬ìš©ëœ insertEdge_AdjList(m=NULL)ëŠ” ë©”ëª¨ë¦¬ë¥¼ ê³„ì‚°í•˜ì§€ ì•Šì•˜ìœ¼ë¯€ë¡œ,
+        //  ì •í™•í•œ ê³„ì‚°ì„ ìœ„í•´ì„  generateRandomGraphì—ì„œ memory_usageë¥¼ ê°±ì‹ í•´ì•¼ í•¨.
+        //  (í˜„ì¬ ì½”ë“œëŠ” ê°„ì„  ì¶”ê°€/ì‚­ì œ í…ŒìŠ¤íŠ¸ ì‹œì˜ ë©”ëª¨ë¦¬ë§Œ ê°±ì‹  -> ì´ˆê¸° ë©”ëª¨ë¦¬ë¡œ ìˆ˜ì •))
 
-        // (¼öÁ¤) generateRandomGraph°¡ ³¡³­ ½ÃÁ¡ÀÇ Á¤È®ÇÑ ¸Ş¸ğ¸® °è»ê
+        // (ìˆ˜ì •) generateRandomGraphê°€ ëë‚œ ì‹œì ì˜ ì •í™•í•œ ë©”ëª¨ë¦¬ ê³„ì‚°
         GraphAdjList* g_list = (GraphAdjList*)graph;
         g_list->memory_usage = sizeof(GraphAdjList) + (V * sizeof(AdjList)) + (2LL * E * sizeof(AdjListNode));
         memory = g_list->memory_usage;
     }
 
-    // --- 2. ¼º´É ÃøÁ¤ ½ÃÀÛ (Ç×¸ñº° 1È¸ ·£´ı ½ÇÇà) ---
+    // --- 2. ì„±ëŠ¥ ì¸¡ì • ì‹œì‘ (í•­ëª©ë³„ 1íšŒ ëœë¤ ì‹¤í–‰) ---
 
-    // (ÃøÁ¤ Ç×¸ñ 2) Ãß°¡ °£¼± »ğÀÔ/»èÁ¦ ºñ±³
+    // (ì¸¡ì • í•­ëª© 2) ì¶”ê°€ ê°„ì„  ì‚½ì…/ì‚­ì œ ë¹„êµ
     int u, v;
-    // Å×½ºÆ®¸¦ À§ÇØ, ±×·¡ÇÁ¿¡ 'Á¸ÀçÇÏÁö ¾Ê´Â' »õ °£¼±À» ·£´ıÇÏ°Ô Ã£À½
+    // í…ŒìŠ¤íŠ¸ë¥¼ ìœ„í•´, ê·¸ë˜í”„ì— 'ì¡´ì¬í•˜ì§€ ì•ŠëŠ”' ìƒˆ ê°„ì„ ì„ ëœë¤í•˜ê²Œ ì°¾ìŒ
     do {
         u = rand() % V;
         v = rand() % V;
@@ -451,16 +433,16 @@ void runTestCase(int V, int E, int isMatrix) {
         : checkEdge_AdjList_no_metric(graph, u, v)));
 
     if (isMatrix) {
-        insertEdge_Matrix(graph, u, v, &metrics); // »ğÀÔ (ºñ±³ È½¼ö ´©Àû)
-        deleteEdge_Matrix(graph, u, v, &metrics); // »èÁ¦ (ºñ±³ È½¼ö ´©Àû)
+        insertEdge_Matrix(graph, u, v, &metrics); // ì‚½ì… (ë¹„êµ íšŸìˆ˜ ëˆ„ì )
+        deleteEdge_Matrix(graph, u, v, &metrics); // ì‚­ì œ (ë¹„êµ íšŸìˆ˜ ëˆ„ì )
     }
     else {
-        insertEdge_AdjList(graph, u, v, &metrics); // »ğÀÔ (ºñ±³ È½¼ö ´©Àû)
-        deleteEdge_AdjList(graph, u, v, &metrics); // »èÁ¦ (ºñ±³ È½¼ö ´©Àû)
+        insertEdge_AdjList(graph, u, v, &metrics); // ì‚½ì… (ë¹„êµ íšŸìˆ˜ ëˆ„ì )
+        deleteEdge_AdjList(graph, u, v, &metrics); // ì‚­ì œ (ë¹„êµ íšŸìˆ˜ ëˆ„ì )
     }
 
-    // (ÃøÁ¤ Ç×¸ñ 3) µÎ Á¤Á¡ÀÇ ¿¬°á ¿©ºÎ È®ÀÎ ºñ±³
-    // (ÀÌ Å×½ºÆ®´Â °£¼±ÀÌ ÀÖµç ¾øµç »ó°ü¾øÀ½)
+    // (ì¸¡ì • í•­ëª© 3) ë‘ ì •ì ì˜ ì—°ê²° ì—¬ë¶€ í™•ì¸ ë¹„êµ
+    // (ì´ í…ŒìŠ¤íŠ¸ëŠ” ê°„ì„ ì´ ìˆë“  ì—†ë“  ìƒê´€ì—†ìŒ)
     u = rand() % V;
     v = rand() % V;
     if (isMatrix) {
@@ -470,8 +452,8 @@ void runTestCase(int V, int E, int isMatrix) {
         checkEdge_AdjList(graph, u, v, &metrics);
     }
 
-    // (ÃøÁ¤ Ç×¸ñ 4) Æ¯Á¤ ³ëµå¿¡ ¿¬°áµÈ ÀÎÁ¢ ³ëµå Ãâ·Â ºñ±³
-    v = rand() % V; // ·£´ı Á¤Á¡ v ¼±ÅÃ
+    // (ì¸¡ì • í•­ëª© 4) íŠ¹ì • ë…¸ë“œì— ì—°ê²°ëœ ì¸ì ‘ ë…¸ë“œ ì¶œë ¥ ë¹„êµ
+    v = rand() % V; // ëœë¤ ì •ì  v ì„ íƒ
     if (isMatrix) {
         printNeighbors_Matrix(graph, v, &metrics);
     }
@@ -479,14 +461,14 @@ void runTestCase(int V, int E, int isMatrix) {
         printNeighbors_AdjList(graph, v, &metrics);
     }
 
-    // --- 3. °á°ú Ãâ·Â ---
-    // (¿ä±¸»çÇ×ÀÇ ¿¹½Ã Ãâ·Â Æ÷¸Ë)
-    printf("¸Ş¸ğ¸® %ld Bytes\n", memory);
-    printf("°£¼± »ğÀÔ/»èÁ¦ ºñ±³ %lld¹ø\n", metrics.insert_delete_comps);
-    printf("µÎ Á¤Á¡ÀÇ ¿¬°á È®ÀÎ ºñ±³ %lld¹ø\n", metrics.check_edge_comps);
-    printf("ÇÑ ³ëµåÀÇ ÀÎÁ¢ ³ëµå Ãâ·Â ºñ±³ %lld¹ø\n", metrics.print_neighbors_comps);
+    // --- 3. ê²°ê³¼ ì¶œë ¥ ---
+    // (ìš”êµ¬ì‚¬í•­ì˜ ì˜ˆì‹œ ì¶œë ¥ í¬ë§·)
+    printf("ë©”ëª¨ë¦¬ %ld Bytes\n", memory);
+    printf("ê°„ì„  ì‚½ì…/ì‚­ì œ ë¹„êµ %lldë²ˆ\n", metrics.insert_delete_comps);
+    printf("ë‘ ì •ì ì˜ ì—°ê²° í™•ì¸ ë¹„êµ %lldë²ˆ\n", metrics.check_edge_comps);
+    printf("í•œ ë…¸ë“œì˜ ì¸ì ‘ ë…¸ë“œ ì¶œë ¥ ë¹„êµ %lldë²ˆ\n", metrics.print_neighbors_comps);
 
-    // --- 4. ¸Ş¸ğ¸® ÇØÁ¦ ---
+    // --- 4. ë©”ëª¨ë¦¬ í•´ì œ ---
     if (isMatrix) {
         freeGraph_Matrix(graph);
     }
@@ -496,33 +478,34 @@ void runTestCase(int V, int E, int isMatrix) {
 }
 
 
-// --- ¸ŞÀÎ ÇÔ¼ö (ÇÁ·Î±×·¥ ½ÃÀÛÁ¡) ---
+// --- ë©”ì¸ í•¨ìˆ˜ (í”„ë¡œê·¸ë¨ ì‹œì‘ì ) ---
 int main() {
-    // ·£´ı ½Ãµå ÃÊ±âÈ­ (¸Å¹ø ´Ù¸¥ ·£´ı °ªÀ» ¾ò±â À§ÇÔ)
+    // ëœë¤ ì‹œë“œ ì´ˆê¸°í™” (ë§¤ë²ˆ ë‹¤ë¥¸ ëœë¤ ê°’ì„ ì–»ê¸° ìœ„í•¨)
     srand((unsigned int)time(NULL));
 
-    printf("Á¤Á¡ 100°³, Èñ¼Ò ±×·¡ÇÁ(°£¼± 100°³), ¹ĞÁı ±×·¡ÇÁ(°£¼± 4000°³) ¼º´É ºñ±³\n");
+    printf("ì •ì  100ê°œ, í¬ì†Œ ê·¸ë˜í”„(ê°„ì„  100ê°œ), ë°€ì§‘ ê·¸ë˜í”„(ê°„ì„  4000ê°œ) ì„±ëŠ¥ ë¹„êµ\n");
     printf("-------------------------------------------------------------\n\n");
 
-    // ÄÉÀÌ½º 1: Èñ¼Ò±×·¡ÇÁ (E=100) - ÀÎÁ¢Çà·Ä
-    printf("ÄÉÀÌ½º 1: Èñ¼Ò±×·¡ÇÁ (V=%d, E=%d) - ÀÎÁ¢Çà·Ä\n", VERTICES, E_SPARSE);
+    // ì¼€ì´ìŠ¤ 1: í¬ì†Œê·¸ë˜í”„ (E=100) - ì¸ì ‘í–‰ë ¬
+    printf("ì¼€ì´ìŠ¤ 1: í¬ì†Œê·¸ë˜í”„ (V=%d, E=%d) - ì¸ì ‘í–‰ë ¬\n", VERTICES, E_SPARSE);
     runTestCase(VERTICES, E_SPARSE, 1); // 1 = isMatrix (true)
     printf("\n");
 
-    // ÄÉÀÌ½º 2: Èñ¼Ò±×·¡ÇÁ (E=100) - ÀÎÁ¢¸®½ºÆ®
-    printf("ÄÉÀÌ½º 2: Èñ¼Ò±×·¡ÇÁ (V=%d, E=%d) - ÀÎÁ¢¸®½ºÆ®\n", VERTICES, E_SPARSE);
+    // ì¼€ì´ìŠ¤ 2: í¬ì†Œê·¸ë˜í”„ (E=100) - ì¸ì ‘ë¦¬ìŠ¤íŠ¸
+    printf("ì¼€ì´ìŠ¤ 2: í¬ì†Œê·¸ë˜í”„ (V=%d, E=%d) - ì¸ì ‘ë¦¬ìŠ¤íŠ¸\n", VERTICES, E_SPARSE);
     runTestCase(VERTICES, E_SPARSE, 0); // 0 = isMatrix (false)
     printf("\n");
 
-    // ÄÉÀÌ½º 3: ¹ĞÁı ±×·¡ÇÁ (E=4000) - ÀÎÁ¢Çà·Ä
-    printf("ÄÉÀÌ½º 3: ¹ĞÁı ±×·¡ÇÁ (V=%d, E=%d) - ÀÎÁ¢Çà·Ä\n", VERTICES, E_DENSE);
+    // ì¼€ì´ìŠ¤ 3: ë°€ì§‘ ê·¸ë˜í”„ (E=4000) - ì¸ì ‘í–‰ë ¬
+    printf("ì¼€ì´ìŠ¤ 3: ë°€ì§‘ ê·¸ë˜í”„ (V=%d, E=%d) - ì¸ì ‘í–‰ë ¬\n", VERTICES, E_DENSE);
     runTestCase(VERTICES, E_DENSE, 1);
     printf("\n");
 
-    // ÄÉÀÌ½º 4: ¹ĞÁı ±×·¡ÇÁ (E=4000) - ÀÎÁ¢¸®½ºÆ®
-    printf("ÄÉÀÌ½º 4: ¹ĞÁı ±×·¡ÇÁ (V=%d, E=%d) - ÀÎÁ¢¸®½ºÆ®\n", VERTICES, E_DENSE);
+    // ì¼€ì´ìŠ¤ 4: ë°€ì§‘ ê·¸ë˜í”„ (E=4000) - ì¸ì ‘ë¦¬ìŠ¤íŠ¸
+    printf("ì¼€ì´ìŠ¤ 4: ë°€ì§‘ ê·¸ë˜í”„ (V=%d, E=%d) - ì¸ì ‘ë¦¬ìŠ¤íŠ¸\n", VERTICES, E_DENSE);
     runTestCase(VERTICES, E_DENSE, 0);
     printf("\n");
 
-    return 0; // ÇÁ·Î±×·¥ Á¤»ó Á¾·á
+    return 0; // í”„ë¡œê·¸ë¨ ì •ìƒ ì¢…ë£Œ
+
 }

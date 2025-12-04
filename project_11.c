@@ -5,19 +5,20 @@
 #include <string.h>
 #include <time.h>
 
-// ================= ±âº» ¼³Á¤ =================
+// ================= ê¸°ë³¸ ì„¤ì • =================
 
-#define MAX_SIZE 32033    // µ¥ÀÌÅÍ¼Â ÃÖ´ë Å©±â
+// [ìˆ˜ì • 1] ë°ì´í„° ê°œìˆ˜(ì•½ 3.2ë§Œ ê°œ) + ì‚½ì… í…ŒìŠ¤íŠ¸ ì—¬ìœ ë¶„ì„ ê³ ë ¤í•˜ì—¬ 50,000ìœ¼ë¡œ ì¦ëŸ‰
+#define MAX_SIZE 50000    
 
-// Àü¿ª ºñ±³ È½¼ö
+// ì „ì—­ ë¹„êµ íšŸìˆ˜
 long long g_comparisons = 0;
 
-// ================= 1. ºñÁ¤·Ä ¹è¿­ (¼øÂ÷ Å½»ö) =================
+// ================= 1. ë¹„ì •ë ¬ ë°°ì—´ (ìˆœì°¨ íƒìƒ‰) =================
 
 int seq_search(int arr[], int size, int key) {
     g_comparisons = 0;
     for (int i = 0; i < size; i++) {
-        g_comparisons++;          // arr[i] == key ºñ±³
+        g_comparisons++;          // arr[i] == key ë¹„êµ
         if (arr[i] == key) {
             return i;
         }
@@ -26,33 +27,32 @@ int seq_search(int arr[], int size, int key) {
 }
 
 int unsorted_insert(int arr[], int* size, int key) {
-    // Áßº¹ ¿©ºÎ È®ÀÎ: ÀÖÀ¸¸é ½ÇÆĞ, ¾øÀ¸¸é »ğÀÔ
-    int idx = seq_search(arr, *size, key);    // ºñ±³ ¼ö Ä«¿îÆ®
-    if (idx != -1) {
-        // ÀÌ¹Ì Á¸Àç ¡æ »ğÀÔ ½ÇÆĞ
+    // ì¤‘ë³µ ì—¬ë¶€ í™•ì¸
+    int idx = seq_search(arr, *size, key);
+    if (idx != -1) return 0; // ì´ë¯¸ ì¡´ì¬
+
+    // [ìˆ˜ì • 2] ë°°ì—´ ìš©ëŸ‰ ì´ˆê³¼ ë°©ì§€ ì•ˆì „ì¥ì¹˜
+    if (*size >= MAX_SIZE) {
+        printf("[Error] ë°°ì—´ ìš©ëŸ‰ì´ ê°€ë“ ì°¼ìŠµë‹ˆë‹¤.\n");
         return 0;
     }
 
-    // Á¸ÀçÇÏÁö ¾ÊÀ¸¸é: ºñ±³ ¼ö(g_comparisons)´Â "Áßº¹ °Ë»ç"¿¡ ´ëÇÑ °Í
-    if (*size >= MAX_SIZE) return 0;
     arr[*size] = key;
     (*size)++;
     return 1;
 }
 
 int unsorted_delete(int arr[], int* size, int key) {
-    int idx = seq_search(arr, *size, key);    // ¿©±â¼­ ºñ±³ ¼ö Ä«¿îÆ®
-    if (idx == -1) {
-        // »èÁ¦ ½ÇÆĞ (¾ø´Â Å°)
-        return 0;
-    }
-    // ¸¶Áö¸· ¿ø¼Ò·Î µ¤¾î¾º¿ö¼­ O(1) »èÁ¦
+    int idx = seq_search(arr, *size, key);
+    if (idx == -1) return 0; // ì‚­ì œ ì‹¤íŒ¨
+
+    // ë§ˆì§€ë§‰ ì›ì†Œë¡œ ë®ì–´ì”Œì›Œì„œ O(1) ì‚­ì œ
     arr[idx] = arr[*size - 1];
     (*size)--;
     return 1;
 }
 
-// ================= 2. Á¤·Ä ¹è¿­ (ÀÌÁø Å½»ö) =================
+// ================= 2. ì •ë ¬ ë°°ì—´ (ì´ì§„ íƒìƒ‰) =================
 
 int bin_search(int arr[], int size, int key) {
     g_comparisons = 0;
@@ -61,7 +61,7 @@ int bin_search(int arr[], int size, int key) {
     while (low <= high) {
         int mid = low + (high - low) / 2;
 
-        g_comparisons++;          // arr[mid] == key ºñ±³
+        g_comparisons++;          // arr[mid] == key ë¹„êµ
         if (arr[mid] == key) {
             return mid;
         }
@@ -79,14 +79,13 @@ int sorted_insert(int arr[], int* size, int key) {
     int low = 0, high = *size - 1;
     g_comparisons = 0;
 
-    // ÀÌÁø Å½»öÀ¸·Î À§Ä¡/Áßº¹ ¿©ºÎ È®ÀÎ
+    // ì´ì§„ íƒìƒ‰ìœ¼ë¡œ ìœ„ì¹˜/ì¤‘ë³µ ì—¬ë¶€ í™•ì¸
     while (low <= high) {
         int mid = low + (high - low) / 2;
 
-        g_comparisons++;          // arr[mid] == key ºñ±³
+        g_comparisons++;          // arr[mid] == key ë¹„êµ
         if (arr[mid] == key) {
-            // ÀÌ¹Ì Á¸Àç ¡æ »ğÀÔ ½ÇÆĞ
-            return 0;
+            return 0; // ì´ë¯¸ ì¡´ì¬
         }
         else if (arr[mid] < key) {
             low = mid + 1;
@@ -95,9 +94,14 @@ int sorted_insert(int arr[], int* size, int key) {
             high = mid - 1;
         }
     }
-    // low = »ğÀÔ À§Ä¡
-    if (*size >= MAX_SIZE) return 0;
 
+    // [ìˆ˜ì • 2] ë°°ì—´ ìš©ëŸ‰ ì´ˆê³¼ ë°©ì§€
+    if (*size >= MAX_SIZE) {
+        printf("[Error] ë°°ì—´ ìš©ëŸ‰ì´ ê°€ë“ ì°¼ìŠµë‹ˆë‹¤.\n");
+        return 0;
+    }
+
+    // Shift ì—°ì‚° (ë°ì´í„° ë°€ê¸°)
     for (int i = *size; i > low; i--) {
         arr[i] = arr[i - 1];
     }
@@ -107,12 +111,10 @@ int sorted_insert(int arr[], int* size, int key) {
 }
 
 int sorted_delete(int arr[], int* size, int key) {
-    int idx = bin_search(arr, *size, key);    // ¿©±â¼­ ºñ±³ ¼ö Ä«¿îÆ®
-    if (idx == -1) {
-        // »èÁ¦ ½ÇÆĞ (¾ø´Â Å°)
-        return 0;
-    }
+    int idx = bin_search(arr, *size, key);
+    if (idx == -1) return 0; // ì‚­ì œ ì‹¤íŒ¨
 
+    // Shift ì—°ì‚° (ë°ì´í„° ë‹¹ê¸°ê¸°)
     for (int i = idx; i < *size - 1; i++) {
         arr[i] = arr[i + 1];
     }
@@ -120,7 +122,7 @@ int sorted_delete(int arr[], int* size, int key) {
     return 1;
 }
 
-// ================= 3. AVL Æ®¸® =================
+// ================= 3. AVL íŠ¸ë¦¬ =================
 
 typedef struct AVLNode {
     int key;
@@ -140,7 +142,7 @@ int avl_max(int a, int b) {
 AVLNode* avl_new_node(int key) {
     AVLNode* node = (AVLNode*)malloc(sizeof(AVLNode));
     if (!node) {
-        fprintf(stderr, "¸Ş¸ğ¸® ºÎÁ·(AVLNode)\n");
+        fprintf(stderr, "ë©”ëª¨ë¦¬ ë¶€ì¡±(AVLNode)\n");
         exit(1);
     }
     node->key = key;
@@ -180,14 +182,13 @@ int avl_get_balance(AVLNode* node) {
     return avl_height(node->left) - avl_height(node->right);
 }
 
-// Àç±Í »ğÀÔ (Áßº¹ÀÌ¸é ½ÇÆĞ)
 AVLNode* avl_insert_node(AVLNode* node, int key, long long* comp, int* inserted) {
     if (!node) {
         *inserted = 1;
         return avl_new_node(key);
     }
 
-    (*comp)++;                          // key vs node->key ºñ±³
+    (*comp)++;
     if (key < node->key) {
         node->left = avl_insert_node(node->left, key, comp, inserted);
     }
@@ -195,26 +196,22 @@ AVLNode* avl_insert_node(AVLNode* node, int key, long long* comp, int* inserted)
         node->right = avl_insert_node(node->right, key, comp, inserted);
     }
     else {
-        *inserted = 0;                  // Áßº¹ ¡æ »ğÀÔ ½ÇÆĞ
+        *inserted = 0; // ì¤‘ë³µ
         return node;
     }
 
     node->height = 1 + avl_max(avl_height(node->left), avl_height(node->right));
-
     int balance = avl_get_balance(node);
 
-    // LL
+    // íšŒì „ ë¡œì§ (LL, RR, LR, RL)
     if (balance > 1 && key < node->left->key)
         return avl_right_rotate(node);
-    // RR
     if (balance < -1 && key > node->right->key)
         return avl_left_rotate(node);
-    // LR
     if (balance > 1 && key > node->left->key) {
         node->left = avl_left_rotate(node->left);
         return avl_right_rotate(node);
     }
-    // RL
     if (balance < -1 && key < node->right->key) {
         node->right = avl_right_rotate(node->right);
         return avl_left_rotate(node);
@@ -231,20 +228,17 @@ int avl_insert(AVLNode** root, int key) {
 
 AVLNode* avl_min_node(AVLNode* node) {
     AVLNode* cur = node;
-    while (cur && cur->left) {
-        cur = cur->left;
-    }
+    while (cur && cur->left) cur = cur->left;
     return cur;
 }
 
-// Àç±Í »èÁ¦
 AVLNode* avl_delete_node(AVLNode* root, int key, long long* comp, int* deleted) {
     if (!root) {
         *deleted = 0;
         return root;
     }
 
-    (*comp)++;                          // key vs root->key ºñ±³
+    (*comp)++;
     if (key < root->key) {
         root->left = avl_delete_node(root->left, key, comp, deleted);
     }
@@ -253,20 +247,18 @@ AVLNode* avl_delete_node(AVLNode* root, int key, long long* comp, int* deleted) 
     }
     else {
         *deleted = 1;
-        // 0°³ ¶Ç´Â 1°³ ÀÚ½Ä
         if (!root->left || !root->right) {
             AVLNode* temp = root->left ? root->left : root->right;
-            if (!temp) {        // leaf
+            if (!temp) {
                 temp = root;
                 root = NULL;
             }
-            else {              // ÇÑ ÀÚ½Ä
+            else {
                 *root = *temp;
             }
             free(temp);
         }
         else {
-            // 2°³ ÀÚ½Ä: ¿À¸¥ÂÊ ¼­ºêÆ®¸®¿¡¼­ ÃÖ¼Ò ³ëµå
             AVLNode* temp = avl_min_node(root->right);
             root->key = temp->key;
             root->right = avl_delete_node(root->right, temp->key, comp, deleted);
@@ -278,18 +270,14 @@ AVLNode* avl_delete_node(AVLNode* root, int key, long long* comp, int* deleted) 
     root->height = 1 + avl_max(avl_height(root->left), avl_height(root->right));
     int balance = avl_get_balance(root);
 
-    // LL
     if (balance > 1 && avl_get_balance(root->left) >= 0)
         return avl_right_rotate(root);
-    // LR
     if (balance > 1 && avl_get_balance(root->left) < 0) {
         root->left = avl_left_rotate(root->left);
         return avl_right_rotate(root);
     }
-    // RR
     if (balance < -1 && avl_get_balance(root->right) <= 0)
         return avl_left_rotate(root);
-    // RL
     if (balance < -1 && avl_get_balance(root->right) > 0) {
         root->right = avl_right_rotate(root->right);
         return avl_left_rotate(root);
@@ -308,7 +296,7 @@ AVLNode* avl_search(AVLNode* root, int key) {
     g_comparisons = 0;
     AVLNode* cur = root;
     while (cur) {
-        g_comparisons++;                          // key vs cur->key ºñ±³
+        g_comparisons++;
         if (key == cur->key) return cur;
         else if (key < cur->key) cur = cur->left;
         else cur = cur->right;
@@ -323,25 +311,30 @@ void avl_free(AVLNode* root) {
     free(root);
 }
 
-// ================= ÆÄÀÏ ·Îµå & ¼ÅÇÃ & Á¤·Ä =================
+// ================= íŒŒì¼ ë¡œë“œ & ì…”í”Œ & ì •ë ¬ =================
 
 int load_data(int arr[]) {
-    FILE* file = fopen("µ¥ÀÌÅÍ.csv", "r");
+    FILE* file = fopen("ë°ì´í„°.csv", "r");
     if (!file) {
-        fprintf(stderr, "Error: 'µ¥ÀÌÅÍ.csv' ÆÄÀÏÀ» ¿­ ¼ö ¾ø½À´Ï´Ù.\n");
+        fprintf(stderr, "Error: 'ë°ì´í„°.csv' íŒŒì¼ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.\n");
         return 0;
     }
 
     char line[1024];
     int count = 0;
 
-    // Çì´õ ½ºÅµ
+    // í—¤ë” ìŠ¤í‚µ
     if (!fgets(line, sizeof(line), file)) {
         fclose(file);
         return 0;
     }
 
-    while (fgets(line, sizeof(line), file) && count < MAX_SIZE) {
+    while (fgets(line, sizeof(line), file)) {
+        // [ìˆ˜ì • 2] íŒŒì¼ì´ MAX_SIZEë³´ë‹¤ í¬ë©´ ì¤‘ë‹¨ (Buffer Overflow ë°©ì§€)
+        if (count >= MAX_SIZE) {
+            printf("Warning: ì„¤ì •ëœ ìµœëŒ€ ë°ì´í„° ê°œìˆ˜(%d)ì— ë„ë‹¬í•˜ì—¬ ë¡œë“œë¥¼ ì¤‘ë‹¨í•©ë‹ˆë‹¤.\n", MAX_SIZE);
+            break;
+        }
         if (sscanf(line, "%d,", &arr[count]) == 1) {
             count++;
         }
@@ -372,130 +365,105 @@ void setup_arrays(int original[], int size, int unsorted[], int sorted[]) {
         unsorted[i] = original[i];
         sorted[i] = original[i];
     }
-    shuffle(unsorted, size);                      // ºñÁ¤·Ä ¹è¿­
-    qsort(sorted, size, sizeof(int), compare_ints);     // Á¤·Ä ¹è¿­
+    shuffle(unsorted, size);
+    qsort(sorted, size, sizeof(int), compare_ints);
 }
 
-// ================= ¸ŞÀÎ: ¼º°ø/½ÇÆĞ ¡¿ »ğÀÔ/»èÁ¦/°Ë»ö ºñ±³ È½¼ö =================
+// ================= ë©”ì¸ í•¨ìˆ˜ =================
 
 int main(void) {
-    srand((unsigned)time(NULL)); // ½ÇÇà ½Ã¸¶´Ù ´Ù¸¥ ½Ãµå·Î ÃÊ±âÈ­ÇÏ¿© ·£´ı¼º È®º¸
+    srand((unsigned)time(NULL));
 
-    int original[MAX_SIZE];
-    int unsorted_arr[MAX_SIZE];
-    int sorted_arr[MAX_SIZE];
+    // [ìˆ˜ì • 1] Stack Overflow ë°©ì§€ë¥¼ ìœ„í•´ ëŒ€ìš©ëŸ‰ ë°°ì—´ì€ Heap(malloc)ì— í• ë‹¹
+    int* original = (int*)malloc(sizeof(int) * MAX_SIZE);
+    int* unsorted_arr = (int*)malloc(sizeof(int) * MAX_SIZE);
+    int* sorted_arr = (int*)malloc(sizeof(int) * MAX_SIZE);
 
-    int n = load_data(original);
-    if (n == 0) {
+    // ë©”ëª¨ë¦¬ í• ë‹¹ ì‹¤íŒ¨ ì²´í¬
+    if (!original || !unsorted_arr || !sorted_arr) {
+        fprintf(stderr, "ë©”ëª¨ë¦¬ í• ë‹¹ ì‹¤íŒ¨\n");
         return 1;
     }
 
-    // Á¸ÀçÇÏ´Â Å°: original µ¥ÀÌÅÍ Áß ·£´ıÀ¸·Î ¼±Á¤
+    int n = load_data(original);
+    if (n == 0) {
+        // ì¢…ë£Œ ì „ ë©”ëª¨ë¦¬ í•´ì œ
+        free(original); free(unsorted_arr); free(sorted_arr);
+        return 1;
+    }
+
+    // ì¡´ì¬í•˜ëŠ” í‚¤: ëœë¤ ì„ íƒ
     int random_index = rand() % n;
     int key_exist = original[random_index];
 
-    // Á¸ÀçÇÏÁö ¾Ê´Â Å°: ¹üÀ§ ¹Û Å« °ªÀ¸·Î °¡Á¤
-    // (original ¹è¿­Àº CSV ·Îµå ¼ø¼­ÀÌ¹Ç·Î, ¸¶Áö¸· ¿ä¼Ò°¡ °¡Àå Å« IDÀÏ È®·üÀÌ ³ôÀ½)
-    int max_id = original[n - 1];
-    int key_absent = max_id + 1000;
+    // ì¡´ì¬í•˜ì§€ ì•ŠëŠ” í‚¤: ë¡œë“œëœ ë°ì´í„° ì¤‘ ìµœëŒ“ê°’ + 1000ìœ¼ë¡œ ì„¤ì •
+    int max_val = 0;
+    for (int i = 0; i < n; i++) {
+        if (original[i] > max_val) max_val = original[i];
+    }
+    int key_absent = max_val + 1000;
 
     setup_arrays(original, n, unsorted_arr, sorted_arr);
     int n_uns = n;
     int n_srt = n;
 
-    printf("µ¥ÀÌÅÍ °³¼ö                   = %d\n", n);
-    printf("Á¸ÀçÇÏ´Â Å° (key_exist)       = %d (random)\n", key_exist);
-    printf("Á¸ÀçÇÏÁö ¾Ê´Â Å° (key_absent) = %d\n\n", key_absent);
+    printf("ë°ì´í„° ê°œìˆ˜           = %d\n", n);
+    printf("ì¡´ì¬í•˜ëŠ” í‚¤ (key_exist)   = %d\n", key_exist);
+    printf("ì¡´ì¬í•˜ì§€ ì•ŠëŠ” í‚¤ (key_absent) = %d\n\n", key_absent);
 
-    // ---------------- 1. ºñÁ¤·Ä ¹è¿­ ----------------
-    printf("=== [1] ºñÁ¤·Ä ¹è¿­ (¼øÂ÷ Å½»ö) ===\n");
-
-    // °Ë»ö ¼º°ø
+    // ---------------- 1. ë¹„ì •ë ¬ ë°°ì—´ ----------------
+    printf("=== [1] ë¹„ì •ë ¬ ë°°ì—´ (ìˆœì°¨ íƒìƒ‰) ===\n");
     seq_search(unsorted_arr, n_uns, key_exist);
-    printf("°Ë»ö ¼º°ø (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // °Ë»ö ½ÇÆĞ
+    printf("ê²€ìƒ‰ ì„±ê³µ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     seq_search(unsorted_arr, n_uns, key_absent);
-    printf("°Ë»ö ½ÇÆĞ (¹ÌÁ¸Àç) : %lld È¸ ºñ±³\n\n", g_comparisons);
-
-    // »ğÀÔ ½ÇÆĞ (ÀÌ¹Ì ÀÖ´Â Å°)
+    printf("ê²€ìƒ‰ ì‹¤íŒ¨ (ë¯¸ì¡´ì¬) : %lld íšŒ ë¹„êµ\n\n", g_comparisons);
     unsorted_insert(unsorted_arr, &n_uns, key_exist);
-    printf("»ğÀÔ ½ÇÆĞ (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // »ğÀÔ ¼º°ø (¾ø´Â Å°)
+    printf("ì‚½ì… ì‹¤íŒ¨ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     unsorted_insert(unsorted_arr, &n_uns, key_absent);
-    printf("»ğÀÔ ¼º°ø (»õ Å°)  : %lld È¸ ºñ±³\n\n", g_comparisons);
-
-    // »èÁ¦ ¼º°ø (¹æ±İ ³ÖÀº key_absent »èÁ¦)
+    printf("ì‚½ì… ì„±ê³µ (ìƒˆ í‚¤)  : %lld íšŒ ë¹„êµ\n\n", g_comparisons);
     unsorted_delete(unsorted_arr, &n_uns, key_absent);
-    printf("»èÁ¦ ¼º°ø (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // »èÁ¦ ½ÇÆĞ (ÀÌ¹Ì »èÁ¦µÈ key_absent ÇÑ ¹ø ´õ »èÁ¦ ½Ãµµ)
+    printf("ì‚­ì œ ì„±ê³µ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     unsorted_delete(unsorted_arr, &n_uns, key_absent);
-    printf("»èÁ¦ ½ÇÆĞ (¹ÌÁ¸Àç) : %lld È¸ ºñ±³\n\n", g_comparisons);
+    printf("ì‚­ì œ ì‹¤íŒ¨ (ë¯¸ì¡´ì¬) : %lld íšŒ ë¹„êµ\n\n", g_comparisons);
 
-
-    // ---------------- 2. Á¤·Ä ¹è¿­ ----------------
-    printf("\n=== [2] Á¤·Ä ¹è¿­ (ÀÌÁø Å½»ö) ===\n");
-
-    // °Ë»ö ¼º°ø
+    // ---------------- 2. ì •ë ¬ ë°°ì—´ ----------------
+    printf("\n=== [2] ì •ë ¬ ë°°ì—´ (ì´ì§„ íƒìƒ‰) ===\n");
     bin_search(sorted_arr, n_srt, key_exist);
-    printf("°Ë»ö ¼º°ø (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // °Ë»ö ½ÇÆĞ
+    printf("ê²€ìƒ‰ ì„±ê³µ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     bin_search(sorted_arr, n_srt, key_absent);
-    printf("°Ë»ö ½ÇÆĞ (¹ÌÁ¸Àç) : %lld È¸ ºñ±³\n\n", g_comparisons);
-
-    // »ğÀÔ ½ÇÆĞ (ÀÌ¹Ì ÀÖ´Â Å°)
+    printf("ê²€ìƒ‰ ì‹¤íŒ¨ (ë¯¸ì¡´ì¬) : %lld íšŒ ë¹„êµ\n\n", g_comparisons);
     sorted_insert(sorted_arr, &n_srt, key_exist);
-    printf("»ğÀÔ ½ÇÆĞ (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // »ğÀÔ ¼º°ø (¾ø´Â Å°)
+    printf("ì‚½ì… ì‹¤íŒ¨ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     sorted_insert(sorted_arr, &n_srt, key_absent);
-    printf("»ğÀÔ ¼º°ø (»õ Å°)  : %lld È¸ ºñ±³\n\n", g_comparisons);
-
-    // »èÁ¦ ¼º°ø (¹æ±İ ³ÖÀº key_absent »èÁ¦)
+    printf("ì‚½ì… ì„±ê³µ (ìƒˆ í‚¤)  : %lld íšŒ ë¹„êµ\n\n", g_comparisons);
     sorted_delete(sorted_arr, &n_srt, key_absent);
-    printf("»èÁ¦ ¼º°ø (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // »èÁ¦ ½ÇÆĞ (ÀÌ¹Ì »èÁ¦µÈ key_absent ´Ù½Ã »èÁ¦)
+    printf("ì‚­ì œ ì„±ê³µ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     sorted_delete(sorted_arr, &n_srt, key_absent);
-    printf("»èÁ¦ ½ÇÆĞ (¹ÌÁ¸Àç) : %lld È¸ ºñ±³\n\n", g_comparisons);
-
+    printf("ì‚­ì œ ì‹¤íŒ¨ (ë¯¸ì¡´ì¬) : %lld íšŒ ë¹„êµ\n\n", g_comparisons);
 
     // ---------------- 3. AVL Tree ----------------
     printf("\n=== [3] AVL Tree ===\n");
     AVLNode* root = NULL;
+    for (int i = 0; i < n; i++) avl_insert(&root, original[i]);
 
-    // ÃÊ±â µ¥ÀÌÅÍ ÀüÃ¼ »ğÀÔ (ÃÊ±â ºñ±³ È½¼ö´Â ½ÇÇè¿¡¼­ Á¦¿Ü)
-    for (int i = 0; i < n; i++) {
-        avl_insert(&root, original[i]);
-    }
-
-    // °Ë»ö ¼º°ø
     avl_search(root, key_exist);
-    printf("°Ë»ö ¼º°ø (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // °Ë»ö ½ÇÆĞ
+    printf("ê²€ìƒ‰ ì„±ê³µ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     avl_search(root, key_absent);
-    printf("°Ë»ö ½ÇÆĞ (¹ÌÁ¸Àç) : %lld È¸ ºñ±³\n\n", g_comparisons);
-
-    // »ğÀÔ ½ÇÆĞ (ÀÌ¹Ì ÀÖ´Â Å°)
+    printf("ê²€ìƒ‰ ì‹¤íŒ¨ (ë¯¸ì¡´ì¬) : %lld íšŒ ë¹„êµ\n\n", g_comparisons);
     avl_insert(&root, key_exist);
-    printf("»ğÀÔ ½ÇÆĞ (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // »ğÀÔ ¼º°ø (¾ø´Â Å°)
+    printf("ì‚½ì… ì‹¤íŒ¨ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     avl_insert(&root, key_absent);
-    printf("»ğÀÔ ¼º°ø (»õ Å°)  : %lld È¸ ºñ±³\n\n", g_comparisons);
-
-    // »èÁ¦ ¼º°ø (¹æ±İ ³ÖÀº key_absent »èÁ¦)
+    printf("ì‚½ì… ì„±ê³µ (ìƒˆ í‚¤)  : %lld íšŒ ë¹„êµ\n\n", g_comparisons);
     avl_delete(&root, key_absent);
-    printf("»èÁ¦ ¼º°ø (Á¸Àç)   : %lld È¸ ºñ±³\n", g_comparisons);
-
-    // »èÁ¦ ½ÇÆĞ (ÀÌ¹Ì »èÁ¦µÈ key_absent ´Ù½Ã »èÁ¦)
+    printf("ì‚­ì œ ì„±ê³µ (ì¡´ì¬)   : %lld íšŒ ë¹„êµ\n", g_comparisons);
     avl_delete(&root, key_absent);
-    printf("»èÁ¦ ½ÇÆĞ (¹ÌÁ¸Àç) : %lld È¸ ºñ±³\n", g_comparisons);
+    printf("ì‚­ì œ ì‹¤íŒ¨ (ë¯¸ì¡´ì¬) : %lld íšŒ ë¹„êµ\n", g_comparisons);
 
+    // [ìˆ˜ì • 3] ë©”ëª¨ë¦¬ ì •ë¦¬ (í•„ìˆ˜)
     avl_free(root);
+    free(original);
+    free(unsorted_arr);
+    free(sorted_arr);
+
     return 0;
 }
